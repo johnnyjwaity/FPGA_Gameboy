@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<preferences>
+ <debug showDebugMenu="0" />
+ <systemtable filter="All Interfaces">
+  <columns>
+   <connections preferredWidth="191" />
+   <irq preferredWidth="34" />
+   <name preferredWidth="246" />
+  </columns>
+ </systemtable>
+ <library
+   expandedCategories="Library/Interface Protocols/PCI Express/QSYS Example Designs,Library/Interface Protocols,Project,Library/Processors and Peripherals/Peripherals,Library/Interface Protocols/PCI Express,Library/Processors and Peripherals,Library" />
+ <window width="2880" height="1740" x="0" y="0" />
+</preferences>

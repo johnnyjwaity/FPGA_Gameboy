@@ -1,0 +1,158 @@
+/************************************************************************
+Avalon-MM Interface VGA Text mode display
+
+Register Map:
+0x000-0x0257 : VRAM, 80x30 (2400 byte, 600 word) raster order (first column then row)
+0x258        : control register
+
+VRAM Format:
+X->
+[ 31  30-24][ 23  22-16][ 15  14-8 ][ 7    6-0 ]
+[IV3][CODE3][IV2][CODE2][IV1][CODE1][IV0][CODE0]
+
+IVn = Draw inverse glyph
+CODEn = Glyph code from IBM codepage 437
+
+Control Register Format:
+[[31-25][24-21][20-17][16-13][ 12-9][ 8-5 ][ 4-1 ][   0    ] 
+[[RSVD ][FGD_R][FGD_G][FGD_B][BKG_R][BKG_G][BKG_B][RESERVED]
+
+VSYNC signal = bit which flips on every Vsync (time for new frame), used to synchronize software
+BKG_R/G/B = Background color, flipped with foreground when IVn bit is set
+FGD_R/G/B = Foreground color, flipped with background when Inv bit is set
+
+************************************************************************/
+
+
+module vga_text_avl_interface (
+	// Avalon Clock Input, note this clock is also used for VGA, so this must be 50Mhz
+	// We can put a clock divider here in the future to make this IP more generalizable
+	input logic CLK,
+	
+	// Avalon Reset Input
+	input logic RESET,
+	
+	// Avalon-MM Slave Signals
+	input  logic AVL_READ,					// Avalon-MM Read
+	input  logic AVL_WRITE,					// Avalon-MM Write
+	input  logic AVL_CS,					// Avalon-MM Chip Select
+	input  logic [3:0] AVL_BYTE_EN,			// Avalon-MM Byte Enable
+	input  logic [11:0] AVL_ADDR,			// Avalon-MM Address
+	input  logic [31:0] AVL_WRITEDATA,		// Avalon-MM Write Data
+	output logic [31:0] AVL_READDATA,		// Avalon-MM Read Data
+	
+	// Exported Conduit (mapped to VGA port - make sure you export in Platform Designer)
+	output logic [3:0]  red, green, blue,	// VGA color channels (mapped to output pins in top-level)
+	output logic hs, vs						// VGA HS/VS
+);
+
+logic[10:0] addrB;
+logic[31:0] ram_out;
+
+vram ram(.address_a(AVL_ADDR[10:0]), .address_b(addrB), .byteena_a(AVL_BYTE_EN), .byteena_b(4'hF), .clock(CLK), .data_a(AVL_WRITEDATA), .data_b(), .rden_a(AVL_READ & AVL_CS), .rden_b(1'b1), .wren_a(AVL_WRITE & AVL_CS & (~AVL_ADDR[11])), .wren_b(1'b0), .q_a(AVL_READDATA), .q_b(ram_out));
+
+logic CLK_25, BLANK;
+logic [9:0] DrawX, DrawY;
+
+int cur_pixel = (DrawY * 160) + DrawX;
+logic [10:0] regIndex = cur_pixel >> 4;
+assign addrB = regIndex;
+int innerPixel = DrawX % 16;
+logic[1:0] color;
+
+always_comb
+begin
+if(innerPixel == 0)
+	assign color = ram_out[31:30];
+else if(innerPixel == 1)
+	assign color = ram_out[29:28];
+else if(innerPixel == 2)
+	assign color = ram_out[27:26];
+else if(innerPixel == 3)
+	assign color = ram_out[25:24];
+else if(innerPixel == 4)
+	assign color = ram_out[23:22];
+else if(innerPixel == 5)
+	assign color = ram_out[21:20];
+else if(innerPixel == 6)
+	assign color = ram_out[19:18];
+else if(innerPixel == 7)
+	assign color = ram_out[17:16];
+else if(innerPixel == 8)
+	assign color = ram_out[15:14];
+else if(innerPixel == 9)
+	assign color = ram_out[13:12];
+else if(innerPixel == 10)
+	assign color = ram_out[11:10];
+else if(innerPixel == 11)
+	assign color = ram_out[9:8];
+else if(innerPixel == 12)
+	assign color = ram_out[7:6];
+else if(innerPixel == 13)
+	assign color = ram_out[5:4];
+else if(innerPixel == 14)
+	assign color = ram_out[3:2];
+else if(innerPixel == 15)
+	assign color = ram_out[1:0];
+else
+	assign color = 2'b00;
+end
+
+vga_controller vcont(.Clk(CLK), .Reset(RESET), .hs(hs), .vs(vs), .pixel_clk(CLK_25), .blank(BLANK), .sync(), .DrawX(DrawX), .DrawY(DrawY));
+
+
+parameter[9:0] xBound = 160;
+parameter[9:0] yBound = 144;
+
+
+
+always_ff @(posedge CLK_25) begin
+	if(~BLANK)
+		begin
+			red = 4'h0;
+			green = 4'h0;
+			blue = 4'h0;
+		end
+	else
+		begin
+			if(DrawX < xBound && DrawY < yBound)
+				begin
+					case(color)
+						2'b00:
+							begin
+								red = 4'hF;
+								green = 4'hF;
+								blue = 4'hF;
+							end
+						2'b01:
+							begin
+								red = 4'hA;
+								green = 4'hA;
+								blue = 4'hA;
+							end
+						2'b10:
+							begin
+								red = 4'h5;
+								green = 4'h5;
+								blue = 4'h5;
+							end
+						2'b11:
+							begin
+								red = 4'h0;
+								green = 4'h0;
+								blue = 4'h0;
+							end
+					endcase
+
+				end
+			else
+				begin
+					red = 4'h0;
+					green = 4'h0;
+					blue = 4'h0;
+				end
+		end
+end
+
+
+endmodule

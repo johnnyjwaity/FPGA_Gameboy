@@ -1,0 +1,16 @@
+Analysis & Synthesis Status : Successful - Tue Dec 14 12:49:10 2021
+Quartus Prime Version : 18.1.0 Build 625 09/12/2018 SJ Lite Edition
+Revision Name : final
+Top-level Entity Name : emulator
+Family : MAX 10
+Total logic elements : 4,013
+    Total combinational functions : 3,039
+    Dedicated logic registers : 2,409
+Total registers : 2409
+Total pins : 89
+Total virtual pins : 0
+Total memory bits : 76,800
+Embedded Multiplier 9-bit elements : 0
+Total PLLs : 1
+UFM blocks : 0
+ADC blocks : 0
